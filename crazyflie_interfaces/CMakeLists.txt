@@ -29,6 +29,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Status.msg"
   "msg/TrajectoryPolynomialPiece.msg"
   "msg/VelocityWorld.msg"
+  "msg/TrajectoryPoint.msg"
+  "msg/ReferenceTrajectory.msg"
   "srv/GoTo.srv"
   "srv/Land.srv"
   "srv/NotifySetpointsStop.srv"
