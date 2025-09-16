@@ -13,6 +13,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from rclpy.duration import Duration
+from rclpy.time import Time
 
 import time
 
@@ -240,6 +241,11 @@ class CrazyflieServer(Node):
                     self.swarm._cfs[link_uri].logging["custom_log_groups"][log_group_name]["vars"] = custom_log_topics[log_group_name]["vars"]
                     self.swarm._cfs[link_uri].logging["custom_log_groups"][log_group_name][
                         "frequency"] = custom_log_topics[log_group_name]["frequency"]
+                    
+            # Create a publisher for latency custom log topic
+            self.swarm._cfs[link_uri].logging["custom_log_publisher"]["latency"] = self.create_publisher(
+                LogDataGeneric, self.cf_dict[link_uri] + "/latency", 10
+            )
 
             reference_frame = world_tf_name
                # if larger then 3, then the reference frame is not set in the yaml file
@@ -1193,6 +1199,24 @@ class CrazyflieServer(Node):
         thrust = int(min(max(msg.thrust, 0, 0), 60000))
         self.swarm._cfs[uri].cf.commander.send_setpoint(
             roll, pitch, yawrate, thrust)
+
+        t_now = self.get_clock().now()    
+        t_pose = Time.from_msg(msg.stamp_input)
+
+        latency = (t_now - t_pose).nanoseconds
+
+        msg = LogDataGeneric()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.values = [float(latency)/1e6]
+
+        try:
+            self.swarm._cfs[uri].logging["custom_log_publisher"]["latency"].publish(
+            msg)
+        except:
+            self.get_logger().info("Could not publish custom latency message, stopping custom log")
+            # self.swarm._cfs[uri].logging["custom_log_groups"]["latency"]["log_config"].stop()
+
+
 
     def _remove_logging(self, request, response, uri="all"):
         """
